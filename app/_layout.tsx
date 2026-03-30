@@ -1,15 +1,36 @@
-import { Stack } from "expo-router";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import "../global.css";
+import { Redirect, Stack } from "expo-router";
+import { useAuth } from "@/lib/useAuth";
+import { View, ActivityIndicator } from "react-native";
+import AdminShell from "@/components/layout/AdminShell";
 
-export default function RootLayout() {
+export default function AdminLayout() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#080812" }}>
+        <ActivityIndicator size="large" color="#6C63FF" />
+      </View>
+    );
+  }
+
+  if (!session) {
+    return <Redirect href="/login" />;
+  }
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="(admin)" />
+    <AdminShell>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: "#080812" },
+          animation: "fade",
+        }}
+      >
+        <Stack.Screen name="dashboard" />
+        <Stack.Screen name="tournament/[id]" />
+        <Stack.Screen name="match/[id]" />
       </Stack>
-    </GestureHandlerRootView>
+    </AdminShell>
   );
 }

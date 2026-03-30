@@ -32,7 +32,7 @@ export default function CreateTournamentModal({ visible, onClose, onCreated }: P
   const [gameType, setGameType] = useState<GameType>("mlbb");
   const [format,   setFormat]   = useState<StageFormat>("single_elim");
   const [loading,  setLoading]  = useState(false);
-
+ 
   const reset = () => {
     setName("");
     setGameType("mlbb");
