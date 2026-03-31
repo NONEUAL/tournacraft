@@ -7,29 +7,43 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session — onAuthStateChange also fires SIGNED_IN on mount
+    // so we only use getSession to set initial loading state correctly
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
-    // Listen for auth changes (login, logout, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-      }
-    );
+    // Single listener — this is the ONLY thing that updates session state.
+    // login.tsx and other screens must NOT manually navigate after signIn/signOut.
+    // Navigation is driven entirely by session state changes in _layout.tsx / index.tsx.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      // Ensure loading is cleared on any auth event in case getSession was slow
+      setLoading(false);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    // Return error only — caller should NOT navigate. Let onAuthStateChange handle it.
     return { error };
   };
 
   const signOut = async () => {
+    // Set loading true so layouts show spinner during the transition,
+    // preventing any flash of protected content
+    setLoading(true);
     await supabase.auth.signOut();
+    // onAuthStateChange will fire with null session → setSession(null) → setLoading(false)
+    // Navigation is handled by AdminLayout's <Redirect href="/login" />
   };
 
   return { session, loading, signIn, signOut };

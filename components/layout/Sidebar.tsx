@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, usePathname } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -18,25 +20,40 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard",   icon: "grid",       href: "/(admin)/dashboard" },
-  { label: "Tournaments", icon: "award",      href: "/(admin)/dashboard", match: "tournament" },
+  { label: "Dashboard",   icon: "grid",  href: "/(admin)/dashboard" },
+  { label: "Tournaments", icon: "award", href: "/(admin)/dashboard", match: "tournament" },
 ];
 
 export default function Sidebar() {
-  const router   = useRouter();
+  const router  = useRouter();
   const pathname = usePathname();
   const { session, signOut } = useAuth();
-  const [hovered, setHovered] = useState<string | null>(null);
+  const [hovered,    setHovered]    = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
 
-  const email = session?.user?.email ?? "";
-  const initials = email
-    .split("@")[0]
-    .slice(0, 2)
-    .toUpperCase();
+  const email    = session?.user?.email ?? "";
+  const initials = email.split("@")[0].slice(0, 2).toUpperCase();
 
   const isActive = (item: NavItem) => {
     if (item.match) return pathname.includes(item.match);
     return pathname === item.href || pathname === "/dashboard";
+  };
+
+  const handleSignOut = () => {
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Sign Out",
+        style: "destructive",
+        onPress: async () => {
+          setSigningOut(true);
+          await signOut();
+          // DO NOT navigate here — AdminLayout's auth guard handles redirect
+          // when onAuthStateChange fires session = null.
+          // Manually pushing causes a race condition that breaks re-login.
+        },
+      },
+    ]);
   };
 
   return (
@@ -52,7 +69,6 @@ export default function Sidebar() {
         </View>
       </View>
 
-      {/* ── Divider ── */}
       <View style={styles.divider} />
 
       {/* ── Nav ── */}
@@ -70,7 +86,6 @@ export default function Sidebar() {
                 active && styles.navItemActive,
                 hov && !active && styles.navItemHovered,
               ]}
-              // Web hover
               {...(Platform.OS === "web"
                 ? {
                     onMouseEnter: () => setHovered(item.label),
@@ -86,13 +101,11 @@ export default function Sidebar() {
                   color={active ? "#6C63FF" : hov ? "#94A3B8" : "#475569"}
                 />
               </View>
-              <Text
-                style={[
-                  styles.navLabel,
-                  active && styles.navLabelActive,
-                  hov && !active && styles.navLabelHovered,
-                ]}
-              >
+              <Text style={[
+                styles.navLabel,
+                active && styles.navLabelActive,
+                hov && !active && styles.navLabelHovered,
+              ]}>
                 {item.label}
               </Text>
               {active && <View style={styles.activeBar} />}
@@ -101,7 +114,6 @@ export default function Sidebar() {
         })}
       </View>
 
-      {/* ── Spacer ── */}
       <View style={{ flex: 1 }} />
 
       {/* ── Status chip ── */}
@@ -110,20 +122,27 @@ export default function Sidebar() {
         <Text style={styles.statusText}>Live & Connected</Text>
       </View>
 
-      {/* ── User row ── */}
       <View style={styles.divider} />
+
+      {/* ── User row ── */}
       <View style={styles.userRow}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
         <View style={styles.userInfo}>
-          <Text style={styles.userEmail} numberOfLines={1}>
-            {email}
-          </Text>
+          <Text style={styles.userEmail} numberOfLines={1}>{email}</Text>
           <Text style={styles.userRole}>Administrator</Text>
         </View>
-        <TouchableOpacity onPress={signOut} style={styles.signOutBtn}>
-          <Feather name="log-out" size={15} color="#475569" />
+        <TouchableOpacity
+          onPress={handleSignOut}
+          disabled={signingOut}
+          style={styles.signOutBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          {signingOut
+            ? <ActivityIndicator size="small" color="#374151" />
+            : <Feather name="log-out" size={15} color="#475569" />
+          }
         </TouchableOpacity>
       </View>
     </View>
@@ -140,8 +159,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     flexDirection: "column",
   },
-
-  // Logo
   logoRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -176,16 +193,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
   },
-
-  // Divider
   divider: {
     height: 1,
     backgroundColor: "#13132A",
     marginVertical: 16,
     marginHorizontal: -16,
   },
-
-  // Nav
   nav: {
     gap: 2,
   },
@@ -245,8 +258,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: "#6C63FF",
   },
-
-  // Status
   statusChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -270,8 +281,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
-
-  // User
   userRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -309,5 +318,7 @@ const styles = StyleSheet.create({
   },
   signOutBtn: {
     padding: 4,
+    width: 24,
+    alignItems: "center",
   },
 });
