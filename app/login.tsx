@@ -1,15 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  StyleSheet,
-  ActivityIndicator,
+  View, Text, TextInput, TouchableOpacity,
+  KeyboardAvoidingView, Platform, Alert,
+  StyleSheet, ActivityIndicator,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/lib/useAuth";
 
@@ -19,7 +14,19 @@ export default function LoginScreen() {
   const [loading,  setLoading]  = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  const { signIn } = useAuth();
+  const { signIn, session, loading: authLoading } = useAuth();
+  const router = useRouter();
+
+  // ── THE FIX ───────────────────────────────────────────────────────────
+  // Watch session state. When it becomes truthy (after signIn succeeds and
+  // onAuthStateChange fires), redirect. This is decoupled from handleLogin
+  // so there's no race condition between navigation and auth state.
+  useEffect(() => {
+    if (!authLoading && session) {
+      router.replace("/(admin)/dashboard");
+    }
+  }, [session, authLoading]);
+  // ──────────────────────────────────────────────────────────────────────
 
   const handleLogin = async () => {
     const trimmedEmail = email.trim();
@@ -27,19 +34,13 @@ export default function LoginScreen() {
       Alert.alert("Missing fields", "Please enter your email and password.");
       return;
     }
-
     setLoading(true);
     const { error } = await signIn(trimmedEmail, password);
     setLoading(false);
-
     if (error) {
       Alert.alert("Sign In Failed", error.message);
-      return;
     }
-
-    // ✅ DO NOT navigate here.
-    // onAuthStateChange in useAuth will update session → null → session,
-    // which causes index.tsx to redirect to /(admin)/dashboard automatically.
+    // No navigation here — useEffect above handles it when session updates.
   };
 
   return (
@@ -68,8 +69,6 @@ export default function LoginScreen() {
 
         {/* ── Form ── */}
         <View style={styles.form}>
-
-          {/* Email */}
           <View style={styles.field}>
             <Text style={styles.label}>Email</Text>
             <View style={styles.inputRow}>
@@ -85,13 +84,11 @@ export default function LoginScreen() {
                 textContentType="emailAddress"
                 style={styles.input}
                 editable={!loading}
-                onSubmitEditing={() => {}} // focus next
                 returnKeyType="next"
               />
             </View>
           </View>
 
-          {/* Password */}
           <View style={styles.field}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.inputRow}>
@@ -114,39 +111,28 @@ export default function LoginScreen() {
                 style={styles.eyeBtn}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Feather
-                  name={showPass ? "eye-off" : "eye"}
-                  size={14}
-                  color="#374151"
-                />
+                <Feather name={showPass ? "eye-off" : "eye"} size={14} color="#374151" />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Submit */}
           <TouchableOpacity
             onPress={handleLogin}
             disabled={loading}
             style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
             activeOpacity={0.85}
           >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.submitText}>Sign In</Text>
-                <Feather name="arrow-right" size={15} color="#fff" />
-              </>
-            )}
+            {loading
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <>
+                  <Text style={styles.submitText}>Sign In</Text>
+                  <Feather name="arrow-right" size={15} color="#fff" />
+                </>
+            }
           </TouchableOpacity>
-
         </View>
 
-        {/* ── Footer ── */}
-        <Text style={styles.footer}>
-          Tournacraft · Tournament Management System
-        </Text>
-
+        <Text style={styles.footer}>Tournacraft · Tournament Management System</Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -168,15 +154,12 @@ const styles = StyleSheet.create({
     borderColor: "#13132A",
     padding: 36,
     gap: 28,
-    // Web shadow
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 24 },
     shadowOpacity: 0.4,
     shadowRadius: 48,
     elevation: 20,
   },
-
-  // Brand
   brand: {
     flexDirection: "row",
     alignItems: "center",
@@ -214,8 +197,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginTop: 1,
   },
-
-  // Heading
   heading: {
     gap: 4,
   },
@@ -229,8 +210,6 @@ const styles = StyleSheet.create({
     color: "#374151",
     fontSize: 13,
   },
-
-  // Form
   form: {
     gap: 16,
   },
@@ -266,8 +245,6 @@ const styles = StyleSheet.create({
   eyeBtn: {
     padding: 2,
   },
-
-  // Submit
   submitBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -291,8 +268,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
   },
-
-  // Footer
   footer: {
     color: "#1F2937",
     fontSize: 11,
