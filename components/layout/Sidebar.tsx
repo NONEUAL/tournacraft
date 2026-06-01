@@ -11,7 +11,11 @@ const NAV_ITEMS: {
   icon: keyof typeof Feather.glyphMap;
   href: string;
 }[] = [
-  { label: "Tournaments", icon: "award",    href: "/(admin)/dashboard" },
+  { label: "Dashboard",   icon: "home",      href: "/(admin)/dashboard" },
+  { label: "Teams",       icon: "users",     href: "/(admin)/teams" },
+  { label: "Matches",     icon: "git-merge", href: "/(admin)/matches" },
+  { label: "Reports",     icon: "bar-chart-3", href: "/(admin)/reports" },
+  { label: "Settings",    icon: "settings",  href: "/(admin)/settings" },
 ];
 
 export default function Sidebar() {

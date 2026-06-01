@@ -111,12 +111,17 @@ export default function BracketTab({ tournamentId, gameType, tournamentStatus }:
           onPress: async () => {
             setGenerating(true);
             try {
-              const { error } = await supabase.rpc("generate_bracket", {
+              console.log("Calling generate_bracket with tournament_id:", tournamentId);
+              const { data, error } = await supabase.rpc("generate_bracket", {
                 p_tournament_id: tournamentId,
               });
+              console.log("RPC Response:", { data, error });
               if (error) throw error;
+              if (!data?.success) throw new Error(data?.error ?? "Bracket generation failed");
               await fetchBracket();
+              Alert.alert("Success", "Bracket generated!");
             } catch (e: any) {
+              console.error("Generate bracket error:", e);
               Alert.alert("Error", e.message ?? "Failed to generate bracket.");
             } finally {
               setGenerating(false);
