@@ -78,17 +78,30 @@ export default function MatchControllerModal({ match, gameType, onClose, onUpdat
 
   // ── Submit final result ───────────────────────────────────────────────
   const handleSubmit = async () => {
+    // Bug fix #2: Validate match status is "live"
+    if (status !== "live") {
+      Alert.alert("Invalid State", "Match must be live to submit a result.");
+      return;
+    }
+
+    // Bug fix #1: Prevent tied scores
     if (scoreA === scoreB) {
       Alert.alert("Tie", "Scores are tied. Please resolve before submitting.");
       return;
     }
 
+    // Bug fix #4: Validate teams exist before determining winner
+    if (!teamA || !teamB) {
+      Alert.alert("Error", "Both teams are required to submit a result.");
+      return;
+    }
+
     const winnerId = scoreA > scoreB ? match.team_a_id : match.team_b_id;
-    const winnerName = (scoreA > scoreB ? teamA : teamB)?.name ?? "Unknown";
+    const winnerName = scoreA > scoreB ? teamA.name : teamB.name;
 
     Alert.alert(
       "Confirm Result",
-      `Declare "${winnerName}" as the winner?\n\n${teamA?.name ?? "?"} ${scoreA} — ${scoreB} ${teamB?.name ?? "?"}`,
+      `Declare "${winnerName}" as the winner?\n\n${teamA.name} ${scoreA} — ${scoreB} ${teamB.name}`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -228,10 +241,10 @@ export default function MatchControllerModal({ match, gameType, onClose, onUpdat
             {isLive && (
               <TouchableOpacity
                 onPress={handleSubmit}
-                disabled={submitting || scoreA === scoreB}
+                disabled={submitting || scoreA === scoreB || !teamA || !teamB}
                 style={[
                   styles.submitBtn,
-                  (submitting || scoreA === scoreB) && styles.submitBtnDisabled,
+                  (submitting || scoreA === scoreB || !teamA || !teamB) && styles.submitBtnDisabled,
                 ]}
                 activeOpacity={0.85}
               >
@@ -249,7 +262,7 @@ export default function MatchControllerModal({ match, gameType, onClose, onUpdat
               <View style={styles.resultBanner}>
                 <Feather name="award" size={14} color="#22C55E" />
                 <Text style={styles.resultBannerText}>
-                  {(scoreA > scoreB ? teamA : teamB)?.name ?? "?"} wins!
+                  {scoreA > scoreB ? teamA?.name : teamB?.name} wins!
                 </Text>
               </View>
             )}
